@@ -1,9 +1,4 @@
-class URLError():
-    pass
+class KeyError(Exception):
+    """KeyError."""
 
-
-class StatusError():
-    pass
-
-class TelegramError():
     pass

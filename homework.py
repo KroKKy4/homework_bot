@@ -10,9 +10,6 @@ from exceptions import KeyError
 
 load_dotenv()
 
-GREETINGS_TEXT = 'Привет!'
-SUCCESSFUL_SENDING_TEXT = 'Сообщение успешно отправлено'
-
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')

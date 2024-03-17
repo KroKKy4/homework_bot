@@ -1,4 +1,10 @@
 class KeyError(Exception):
-    """KeyError."""
+    pass
 
+
+class URLError(Exception):
+    pass
+
+
+class ParamError(Exception):
     pass

@@ -1,3 +1,4 @@
+from http import HTTPStatus
 import logging
 import os
 import time
@@ -6,7 +7,7 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from exceptions import KeyError
+from exceptions import KeyError, URLError, ParamError
 
 load_dotenv()
 
@@ -28,30 +29,28 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверяет доступность переменных окружения."""
-    LST_NOT_NULL = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
-    LST_NOT_NULL_STRING = [
-        'PRACTICUM_TOKEN', 'TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID'
-    ]
-    if not all(LST_NOT_NULL):
-        for i in range(len(LST_NOT_NULL)):
-            if not LST_NOT_NULL[i]:
-                logging.critical(
-                    'Отсутствует обязательная переменная '
-                    f'{LST_NOT_NULL_STRING[i]}'
-                )
-        exit()
-    logging.debug('Проверка ключей закончилась успешно')
-    return True
+    tokens_dict = {
+        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
+    }
+    error_list = []
+    for key, value in tokens_dict.items():
+        if not value:
+            error_list.append(f'Отсутствует обязательная переменная {key}')
+
+    return error_list
 
 
 def send_message(bot, message):
     """Отправляет сообщение в Telegram чат."""
+    logging.info('Начало отправки сообщения в Telegram.')
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
     except Exception:
         logging.error('Сбой при отправке сообщения')
     else:
-        logging.debug('Сообщение отправлено')
+        logging.debug('Сообщение успешно отправлено в Telegram.')
 
 
 def get_api_answer(timestamp):
@@ -62,22 +61,23 @@ def get_api_answer(timestamp):
         'headers': HEADERS,
         'params': {'from_date': current_time},
     }
+    logging.info('Начало запроса к API.')
     try:
         response = requests.get(**params_request)
 
-        if response.status_code != 200:
-            raise Exception(f'Сбой при обращении к URL {response.request.url}')
+        if response.status_code != HTTPStatus.OK:
+            raise URLError(f'Сбой при обращении к URL {response.request.url}')
 
         logging.debug('Ответ от сервера получен')
         response_data = response.json()
 
         if 'current_date' not in response_data:
-            raise Exception('Отсутствует параметр `current_date`')
+            raise ParamError('Отсутствует параметр `current_date`')
 
     except requests.RequestException as e:
-        logging.error(f'Ошибка отправки запроса. {e}')
+        raise (f'Ошибка отправки запроса. {e}')
     except Exception as ex:
-        logging.error(f'Произошла ошибка: {ex}')
+        raise (f'Произошла ошибка: {ex}')
     return response_data
 
 
@@ -98,15 +98,12 @@ def check_response(response):
             'В ответе API домашки под ключом `homeworks`'
             ' данные приходят не в виде списка.'
         )
-    homework = response.get('homeworks')
-    return homework
+
+    return response.get('homeworks')
 
 
 def parse_status(homework):
     """Извлекает из информации статус домашней работы."""
-    if not homework:
-        return 'Отсутствуют домашние работы'
-
     if 'homework_name' not in homework:
         raise KeyError('В ответе отсутствует ключ homework_name')
 
@@ -128,11 +125,13 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
+    if check_tokens():
+        logging.critical('Отсутствуют обязательные переменные')
+        return
+
     last_send = {
         'error': None,
     }
-    if not check_tokens():
-        logging.critical('Отсутствуют обязательные переменные')
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())

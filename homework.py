@@ -1,6 +1,7 @@
 from http import HTTPStatus
 import logging
 import os
+import sys
 import time
 
 import requests
@@ -126,8 +127,10 @@ def parse_status(homework):
 def main():
     """Основная логика работы бота."""
     if check_tokens():
-        logging.critical('Отсутствуют обязательные переменные')
-        return
+        err_msg = 'Отсутствуют обязательные переменные'
+        logging.critical(err_msg)
+        logger.critical(err_msg.format(tokens=check_tokens()))
+        sys.exit("Ошибка: Токены не прошли валидацию")
 
     last_send = {
         'error': None,
